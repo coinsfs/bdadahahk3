@@ -24,7 +24,23 @@ const DailyCheckin: React.FC = () => {
   const [checkinDays, setCheckinDays] = useState<CheckinDay[]>([]);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
-  const [todayCheckedIn, setTodayCheckedIn] = useState(false);
+
+  // Fungsi untuk mengecek apakah user sudah check-in hari ini
+  const hasCheckedInToday = (): boolean => {
+    if (!user?.lastDailyCheckin) return false;
+    
+    const today = new Date();
+    const lastCheckin = new Date(user.lastDailyCheckin);
+    
+    // Bandingkan tanggal (tahun, bulan, hari) tanpa mempertimbangkan waktu
+    return (
+      today.getFullYear() === lastCheckin.getFullYear() &&
+      today.getMonth() === lastCheckin.getMonth() &&
+      today.getDate() === lastCheckin.getDate()
+    );
+  };
+
+  const todayCheckedIn = hasCheckedInToday();
 
   useEffect(() => {
     // Hanya jalankan jika user ada
@@ -75,10 +91,16 @@ const DailyCheckin: React.FC = () => {
       const response = await apiClient.post('/missions/daily-checkin');
       const { message } = response.data;
       
-      setTodayCheckedIn(true);
       setCurrentStreak(prev => prev + 1);
       
       toast.success(message || "Daily check-in successful! +10 XP", { id: toastId });
+      
+      // Refresh user profile untuk mendapatkan data lastDailyCheckin yang terbaru
+      // Ini akan memicu re-render dan update status check-in
+      if (user) {
+        // Trigger refresh dari AuthContext jika ada
+        window.location.reload(); // Temporary solution, bisa diganti dengan fetchUserProfile()
+      }
       
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || "Failed to complete daily check-in.";
@@ -177,7 +199,7 @@ const DailyCheckin: React.FC = () => {
               {isCheckingIn ? (
                 <><Loader2 size={12} className="animate-spin sm:w-4 sm:h-4" /><span>Processing...</span></>
               ) : todayCheckedIn ? (
-                <><CheckCircle size={12} className="sm:w-4 sm:h-4" /><span>Mission Complete</span></>
+                <><CheckCircle size={12} className="sm:w-4 sm:h-4" /><span>Today's Mission Complete</span></>
               ) : (
                 <><Zap size={12} className="text-cyan-400 sm:w-4 sm:h-4" /><span>Complete Mission</span></>
               )}
@@ -190,6 +212,20 @@ const DailyCheckin: React.FC = () => {
             <span className="text-xs sm:text-sm font-mono text-gray-300">+10 XP</span>
           </div>
         </div>
+
+        {/* Status info - tambahan untuk memberikan feedback yang lebih jelas */}
+        {todayCheckedIn && (
+          <div className="text-center">
+            <p className="text-xs font-mono text-green-400">
+              ✓ Daily mission completed for today
+            </p>
+            {user.lastDailyCheckin && (
+              <p className="text-xs font-mono text-gray-500 mt-1">
+                Last check-in: {new Date(user.lastDailyCheckin).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

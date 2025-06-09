@@ -36,6 +36,7 @@ export interface UserPublic {
   systemStatus?: UserSystemStatus;
   twitter_data?: UserTwitterData; // Tambahkan field ini
   lastLogin?: string;
+  lastDailyCheckin?: string; // Tambahkan field untuk daily check-in terakhir
   createdAt: string;
 }
 
