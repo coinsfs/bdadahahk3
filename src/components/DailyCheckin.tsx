@@ -20,24 +20,27 @@ interface CheckinDay {
 }
 
 const DailyCheckin: React.FC = () => {
-  const { user } = useAuth(); // isAuthenticated tidak perlu, karena parent component sudah mengecek
+  const { user, fetchUserProfile } = useAuth(); // Tambahkan fetchUserProfile
   const [checkinDays, setCheckinDays] = useState<CheckinDay[]>([]);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
 
-  // Fungsi untuk mengecek apakah user sudah check-in hari ini
+  // Fungsi untuk mengecek apakah user sudah check-in hari ini (menggunakan UTC)
   const hasCheckedInToday = (): boolean => {
-    if (!user?.lastDailyCheckin) return false;
+    if (!user?.last_daily_checkin) return false;
     
-    const today = new Date();
-    const lastCheckin = new Date(user.lastDailyCheckin);
+    // Gunakan UTC untuk perbandingan yang konsisten
+    const todayUTC = new Date();
+    const todayUTCDateString = todayUTC.toISOString().split('T')[0]; // Format: YYYY-MM-DD
     
-    // Bandingkan tanggal (tahun, bulan, hari) tanpa mempertimbangkan waktu
-    return (
-      today.getFullYear() === lastCheckin.getFullYear() &&
-      today.getMonth() === lastCheckin.getMonth() &&
-      today.getDate() === lastCheckin.getDate()
-    );
+    const lastCheckinUTC = new Date(user.last_daily_checkin);
+    const lastCheckinUTCDateString = lastCheckinUTC.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    
+    console.log('Today UTC:', todayUTCDateString);
+    console.log('Last checkin UTC:', lastCheckinUTCDateString);
+    console.log('Has checked in today:', todayUTCDateString === lastCheckinUTCDateString);
+    
+    return todayUTCDateString === lastCheckinUTCDateString;
   };
 
   const todayCheckedIn = hasCheckedInToday();
@@ -49,7 +52,7 @@ const DailyCheckin: React.FC = () => {
       // TODO: Ganti data simulasi ini dengan data dari API
       setCurrentStreak(3);
     }
-  }, [user, todayCheckedIn]); // Jalankan ulang jika user berubah atau setelah check-in
+  }, [user, user?.last_daily_checkin]); // Tambahkan dependency last_daily_checkin
 
   const generateCheckinCalendar = () => {
     const today = new Date();
@@ -95,11 +98,10 @@ const DailyCheckin: React.FC = () => {
       
       toast.success(message || "Daily check-in successful! +10 XP", { id: toastId });
       
-      // Refresh user profile untuk mendapatkan data lastDailyCheckin yang terbaru
-      // Ini akan memicu re-render dan update status check-in
-      if (user) {
-        // Trigger refresh dari AuthContext jika ada
-        window.location.reload(); // Temporary solution, bisa diganti dengan fetchUserProfile()
+      // Refresh user profile untuk mendapatkan data last_daily_checkin yang terbaru
+      if (fetchUserProfile) {
+        await fetchUserProfile();
+        console.log('User profile refreshed after check-in');
       }
       
     } catch (error: any) {
@@ -219,9 +221,9 @@ const DailyCheckin: React.FC = () => {
             <p className="text-xs font-mono text-green-400">
               ✓ Daily mission completed for today
             </p>
-            {user.lastDailyCheckin && (
+            {user.last_daily_checkin && (
               <p className="text-xs font-mono text-gray-500 mt-1">
-                Last check-in: {new Date(user.lastDailyCheckin).toLocaleDateString()}
+                Last check-in: {new Date(user.last_daily_checkin).toLocaleDateString()} {new Date(user.last_daily_checkin).toLocaleTimeString()} UTC
               </p>
             )}
           </div>
